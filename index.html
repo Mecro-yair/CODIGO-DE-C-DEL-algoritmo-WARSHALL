@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Algoritmo Paso a Paso</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f8f9fa;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      margin-bottom: 30px;
+      color: #222;
+    }
+
+    table {
+      border-collapse: collapse;
+      margin: 20px 0;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    th, td {
+      border: 1px solid #dee2e6;
+      width: 60px;
+      height: 60px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+      background-color: #fff;
+      transition: background-color 0.3s;
+    }
+
+    th {
+      background-color: #f1f3f5;
+    }
+
+    .highlight {
+      background-color: #ffe066 !important;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      color: white;
+      background-color: #007bff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #log {
+      white-space: pre-wrap;
+      background: #212529;
+      color: #f8f9fa;
+      padding: 15px;
+      margin-top: 30px;
+      width: 100%;
+      max-width: 600px;
+      height: 250px;
+      overflow-y: auto;
+      border-radius: 8px;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <h1>Algoritmo Warshall</h1>
+
+  <table id="matrix"></table>
+
+  <button onclick="nextStep()">▶ Siguiente paso</button>
+
+  <div id="log"></div>
+
+    <script>
+    let labels = ['1', '2', '3'];
+    let A = [
+        [0, 1, 0],
+        [0, 0, 1],
+        [0, 0, 0]
+    ];
+
+    let N = A.length;
+    let k = 0, i = 0, j = 0;
+    let evaluating = false;
+    const logDiv = document.getElementById('log');
+
+    function drawMatrix() {
+        const table = document.getElementById('matrix');
+        table.innerHTML = '';
+
+        const headerRow = document.createElement('tr');
+        headerRow.innerHTML = '<th></th>' + labels.map(l => `<th>${l}</th>`).join('');
+        table.appendChild(headerRow);
+
+        for (let row = 0; row < N; row++) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<th>${labels[row]}</th>`;
+        for (let col = 0; col < N; col++) {
+            let td = document.createElement('td');
+            td.textContent = A[row][col];
+            if (row === i && col === j) {
+            td.classList.add('highlight');
+            }
+            tr.appendChild(td);
+        }
+        table.appendChild(tr);
+        }
+    }
+
+    function nextStep() {
+        if (k >= N) {
+        log("Algoritmo terminado.");
+        return;
+        }
+
+        if (!evaluating) {
+        log(`Evaluando celda A[${i+1}, ${j+1}] con K=${k+1}`);
+        drawMatrix();
+        evaluating = true;
+        return;
+        }
+
+        
+        if (A[i][j] === 0 && A[i][k] === 1 && A[k][j] === 1) {
+        A[i][j] = 1;
+        log(`✔ A[${i+1}, ${j+1}] actualizado a 1 (A[${i+1}, ${k+1}] = 1 y A[${k+1}, ${j+1}] = 1)`);
+        } else {
+        log(`✘ A[${i+1}, ${j+1}] no cambia`);
+        }
+
+        
+        j++;
+        if (j === N) {
+        j = 0;
+        i++;
+        if (i === N) {
+            i = 0;
+            k++;
+        }
+        }
+
+        evaluating = false;
+        drawMatrix();
+    }
+
+    function log(message) {
+        logDiv.textContent += message + '\n';
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    drawMatrix();
+    </script>
+</body>
+</html>
