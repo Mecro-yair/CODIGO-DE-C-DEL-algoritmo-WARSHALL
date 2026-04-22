@@ -1,168 +1,1495 @@
 <!DOCTYPE html>
+
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DevPad">
+<meta name="theme-color" content="#0a0a0f">
+<title>DevPad — Editor</title>
+<style>
+/* ─── RESET & BASE ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%; height: 100dvh;
+  overflow: hidden;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #0a0a0f;
+  color: #e8e8f0;
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+
+/* ─── CSS VARIABLES ─── */
+:root {
+–bg:        #0a0a0f;
+–surface:   #111118;
+–panel:     #16161f;
+–border:    #232330;
+–accent:    #7c6dfa;
+–accent2:   #fa6d9a;
+–green:     #3dffa0;
+–yellow:    #ffd166;
+–text:      #e8e8f0;
+–muted:     #55556a;
+–code:      #c8c8e0;
+–safe-top:  env(safe-area-inset-top, 0px);
+–safe-bot:  env(safe-area-inset-bottom, 0px);
+}
+
+/* ─── LAYOUT ─── */
+#app {
+display: flex;
+flex-direction: column;
+height: 100dvh;
+padding-top: var(–safe-top);
+padding-bottom: var(–safe-bot);
+}
+
+/* ─── TOPBAR ─── */
+#topbar {
+display: flex;
+align-items: center;
+gap: 10px;
+padding: 10px 14px;
+background: var(–surface);
+border-bottom: 1px solid var(–border);
+flex-shrink: 0;
+z-index: 10;
+}
+.logo {
+font-size: 1rem;
+font-weight: 700;
+letter-spacing: -0.3px;
+color: var(–accent);
+}
+.logo span { color: var(–accent2); }
+.spacer { flex: 1; }
+
+.icon-btn {
+background: var(–panel);
+border: 1px solid var(–border);
+color: var(–text);
+border-radius: 8px;
+width: 34px; height: 34px;
+display: flex; align-items: center; justify-content: center;
+cursor: pointer;
+font-size: 1rem;
+transition: all 0.15s;
+-webkit-tap-highlight-color: transparent;
+flex-shrink: 0;
+}
+.icon-btn:active { transform: scale(0.9); background: var(–border); }
+.icon-btn.accent { background: var(–accent); border-color: var(–accent); color: #fff; }
+
+/* ─── TAB BAR ─── */
+#tabbar {
+display: flex;
+background: var(–surface);
+border-bottom: 1px solid var(–border);
+flex-shrink: 0;
+}
+.tab {
+flex: 1;
+padding: 9px 6px;
+text-align: center;
+font-size: 0.72rem;
+font-weight: 600;
+letter-spacing: 0.5px;
+text-transform: uppercase;
+color: var(–muted);
+cursor: pointer;
+border-bottom: 2px solid transparent;
+transition: all 0.15s;
+-webkit-tap-highlight-color: transparent;
+position: relative;
+}
+.tab.active { color: var(–accent); border-bottom-color: var(–accent); }
+.tab .dot {
+display: inline-block;
+width: 6px; height: 6px;
+border-radius: 50%;
+margin-right: 5px;
+vertical-align: middle;
+}
+.dot-html { background: #fa6d6d; }
+.dot-css  { background: #6d9afa; }
+.dot-js   { background: var(–yellow); }
+
+/* ─── MAIN SPLIT ─── */
+#main {
+display: flex;
+flex-direction: column;
+flex: 1;
+overflow: hidden;
+position: relative;
+}
+
+/* ─── EDITOR AREA ─── */
+#editor-area {
+flex: 1;
+display: flex;
+flex-direction: column;
+overflow: hidden;
+min-height: 0;
+}
+
+/* Editor panels */
+.editor-panel {
+display: none;
+flex: 1;
+overflow: hidden;
+position: relative;
+}
+.editor-panel.active { display: flex; flex-direction: column; }
+
+/* Code wrap */
+.code-wrap {
+display: flex;
+flex: 1;
+overflow: hidden;
+background: var(–bg);
+position: relative;
+}
+
+textarea.code {
+flex: 1;
+min-width: 0;
+background: transparent;
+border: none;
+outline: none;
+color: var(–code);
+font-family: ‘Menlo’, ‘Courier New’, monospace;
+font-size: 13px;
+line-height: 1.65;
+padding: 14px 14px 80px;
+resize: none;
+caret-color: var(–accent);
+white-space: pre;
+overflow-x: auto;
+overflow-y: scroll;
+-webkit-overflow-scrolling: touch;
+tab-size: 2;
+-webkit-tap-highlight-color: transparent;
+}
+textarea.code::selection { background: rgba(124,109,250,0.3); }
+
+/* ─── DIVIDER ─── */
+#divider {
+height: 28px;
+background: var(–surface);
+border-top: 1px solid var(–border);
+border-bottom: 1px solid var(–border);
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 12px;
+cursor: ns-resize;
+flex-shrink: 0;
+user-select: none;
+z-index: 5;
+}
+.divider-handle {
+width: 36px; height: 4px;
+background: var(–border);
+border-radius: 2px;
+}
+.divider-label {
+font-size: 0.65rem;
+color: var(–muted);
+font-weight: 600;
+letter-spacing: 1px;
+text-transform: uppercase;
+}
+.run-dot {
+width: 7px; height: 7px;
+border-radius: 50%;
+background: var(–green);
+animation: pulse 2s infinite;
+}
+@keyframes pulse {
+0%, 100% { opacity: 1; }
+50%       { opacity: 0.3; }
+}
+
+/* ─── PREVIEW ─── */
+#preview-area {
+background: #fff;
+flex-shrink: 0;
+height: 40%;
+overflow: hidden;
+position: relative;
+}
+#preview-frame {
+width: 100%;
+height: 100%;
+border: none;
+display: block;
+background: white;
+}
+.preview-loading {
+position: absolute;
+inset: 0;
+background: rgba(255,255,255,0.8);
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 0.8rem;
+color: #888;
+pointer-events: none;
+opacity: 0;
+transition: opacity 0.2s;
+}
+.preview-loading.show { opacity: 1; }
+
+/* ─── QUICK SNIPPET BAR ─── */
+#snippet-bar {
+display: flex;
+gap: 6px;
+padding: 7px 10px;
+overflow-x: auto;
+background: var(–surface);
+border-top: 1px solid var(–border);
+flex-shrink: 0;
+scrollbar-width: none;
+}
+#snippet-bar::-webkit-scrollbar { display: none; }
+.snip {
+background: var(–panel);
+border: 1px solid var(–border);
+color: var(–code);
+padding: 5px 11px;
+border-radius: 6px;
+font-family: ‘Menlo’, monospace;
+font-size: 0.72rem;
+white-space: nowrap;
+cursor: pointer;
+flex-shrink: 0;
+-webkit-tap-highlight-color: transparent;
+transition: all 0.1s;
+}
+.snip:active { background: var(–accent); color: #fff; border-color: var(–accent); }
+
+/* ─── MODAL / DRAWER ─── */
+#modal-overlay {
+position: fixed; inset: 0;
+background: rgba(0,0,0,0.6);
+backdrop-filter: blur(4px);
+z-index: 50;
+display: none;
+align-items: flex-end;
+}
+#modal-overlay.open { display: flex; }
+#modal-drawer {
+background: var(–panel);
+border-top: 1px solid var(–border);
+border-radius: 20px 20px 0 0;
+width: 100%;
+padding: 16px;
+padding-bottom: calc(16px + var(–safe-bot));
+max-height: 70vh;
+overflow-y: auto;
+animation: slideUp 0.25s ease;
+}
+@keyframes slideUp {
+from { transform: translateY(100%); }
+to   { transform: translateY(0); }
+}
+.drawer-handle {
+width: 40px; height: 4px;
+background: var(–border);
+border-radius: 2px;
+margin: 0 auto 16px;
+}
+.drawer-title {
+font-size: 1rem;
+font-weight: 700;
+margin-bottom: 16px;
+color: var(–text);
+}
+.drawer-section { margin-bottom: 20px; }
+.drawer-section h4 {
+font-size: 0.7rem;
+color: var(–muted);
+text-transform: uppercase;
+letter-spacing: 1px;
+margin-bottom: 10px;
+}
+.drawer-row {
+display: flex;
+gap: 8px;
+flex-wrap: wrap;
+}
+.drawer-btn {
+background: var(–surface);
+border: 1px solid var(–border);
+color: var(–text);
+padding: 10px 14px;
+border-radius: 10px;
+font-family: ‘Menlo’, monospace;
+font-size: 0.78rem;
+cursor: pointer;
+-webkit-tap-highlight-color: transparent;
+transition: all 0.15s;
+}
+.drawer-btn:active { background: var(–accent); color: #fff; border-color: var(–accent); }
+
+/* ─── TOAST ─── */
+#toast {
+position: fixed;
+bottom: calc(20px + var(–safe-bot));
+left: 50%;
+transform: translateX(-50%) translateY(20px);
+background: var(–green);
+color: #000;
+font-size: 0.82rem;
+font-weight: 700;
+padding: 10px 20px;
+border-radius: 20px;
+pointer-events: none;
+opacity: 0;
+transition: all 0.25s;
+z-index: 100;
+white-space: nowrap;
+}
+#toast.show {
+opacity: 1;
+transform: translateX(-50%) translateY(0);
+}
+
+/* ─── INSTALL BANNER ─── */
+#install-banner {
+background: linear-gradient(135deg, #7c6dfa22, #fa6d9a22);
+border: 1px solid var(–accent);
+border-radius: 12px;
+margin: 10px 14px;
+padding: 12px 16px;
+display: none;
+align-items: center;
+gap: 10px;
+flex-shrink: 0;
+}
+#install-banner.show { display: flex; }
+#install-banner p {
+flex: 1;
+font-size: 0.8rem;
+line-height: 1.4;
+color: var(–text);
+}
+#install-banner strong { color: var(–accent); }
+.close-banner {
+background: none; border: none;
+color: var(–muted); font-size: 1.2rem;
+cursor: pointer; padding: 4px;
+}
+
+/* ─── FULLSCREEN PREVIEW ─── */
+#fs-overlay {
+position: fixed; inset: 0;
+z-index: 200;
+display: none;
+flex-direction: column;
+background: #fff;
+}
+#fs-overlay.open { display: flex; }
+#fs-topbar {
+background: var(–bg);
+border-bottom: 1px solid var(–border);
+padding: 10px 16px;
+padding-top: calc(10px + var(–safe-top));
+display: flex;
+align-items: center;
+gap: 10px;
+flex-shrink: 0;
+}
+#fs-url {
+flex: 1;
+background: var(–surface);
+border: 1px solid var(–border);
+border-radius: 8px;
+padding: 6px 12px;
+font-size: 0.8rem;
+color: var(–muted);
+font-family: ‘Menlo’, monospace;
+}
+#fs-frame { flex: 1; border: none; }
+</style>
+
+</head>
+<body>
+
+<div id="app">
+
+  <!-- INSTALL HINT -->
+
+  <div id="install-banner">
+    <p>📱 <strong>Instala como app:</strong> Toca <strong>Compartir →</strong> y luego <strong>"Añadir a pantalla de inicio"</strong> para usarla sin Safari.</p>
+    <button class="close-banner" onclick="closeBanner()">×</button>
+  </div>
+
+  <!-- TOP BAR -->
+
+  <div id="topbar">
+    <div class="logo">Dev<span>Pad</span></div>
+    <div class="spacer"></div>
+    <button class="icon-btn" onclick="clearEditor()" title="Limpiar">🗑</button>
+    <button class="icon-btn" onclick="openSnippets()" title="Snippets">⚡</button>
+    <button class="icon-btn" onclick="openFullscreen()" title="Vista completa">⛶</button>
+    <button class="icon-btn accent" onclick="runCode()" title="Ejecutar">▶</button>
+  </div>
+
+  <!-- FILE TABS -->
+
+  <div id="tabbar">
+    <div class="tab active" onclick="switchTab('html')" id="tab-html">
+      <span class="dot dot-html"></span>HTML
+    </div>
+    <div class="tab" onclick="switchTab('css')" id="tab-css">
+      <span class="dot dot-css"></span>CSS
+    </div>
+    <div class="tab" onclick="switchTab('js')" id="tab-js">
+      <span class="dot dot-js"></span>JS
+    </div>
+  </div>
+
+  <!-- MAIN -->
+
+  <div id="main">
+    <!-- EDITOR -->
+    <div id="editor-area">
+
+```
+  <!-- HTML Panel -->
+  <div class="editor-panel active" id="panel-html">
+    <div class="code-wrap">
+      <textarea class="code" id="code-html"
+        spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off"
+        oninput="onEdit('html')" onkeydown="handleKey(event,'html')"
+      ></textarea>
+    </div>
+  </div>
+
+  <!-- CSS Panel -->
+  <div class="editor-panel" id="panel-css">
+    <div class="code-wrap">
+      <textarea class="code" id="code-css"
+        spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off"
+        oninput="onEdit('css')" onkeydown="handleKey(event,'css')"
+      ></textarea>
+    </div>
+  </div>
+
+  <!-- JS Panel -->
+  <div class="editor-panel" id="panel-js">
+    <div class="code-wrap">
+      <textarea class="code" id="code-js"
+        spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off"
+        oninput="onEdit('js')" onkeydown="handleKey(event,'js')"
+      ></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- DIVIDER -->
+<div id="divider" id="drag-handle">
+  <span class="divider-label">Preview</span>
+  <div class="divider-handle"></div>
+  <div class="run-dot"></div>
+</div>
+
+<!-- PREVIEW -->
+<div id="preview-area">
+  <div class="preview-loading" id="preview-loading">Actualizando…</div>
+  <iframe id="preview-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+</div>
+```
+
+  </div>
+
+  <!-- QUICK KEYS BAR -->
+
+  <div id="snippet-bar">
+    <div class="snip" onclick="insertSnip('  ')">⇥ Tab</div>
+    <div class="snip" onclick="insertSnip('<div></div>')">div</div>
+    <div class="snip" onclick="insertSnip('<p></p>')">p</div>
+    <div class="snip" onclick="insertSnip('<span></span>')">span</div>
+    <div class="snip" onclick="insertSnip('<h1></h1>')">h1</div>
+    <div class="snip" onclick="insertSnip('<button></button>')">btn</div>
+    <div class="snip" onclick="insertSnip('<img src="" alt="">')">img</div>
+    <div class="snip" onclick="insertSnip('<a href=""></a>')">a</div>
+    <div class="snip" onclick="insertSnip('{ }')">{ }</div>
+    <div class="snip" onclick="insertSnip(': ;')">: ;</div>
+    <div class="snip" onclick="insertSnip('()')">( )</div>
+    <div class="snip" onclick="insertSnip('""')">" "</div>
+    <div class="snip" onclick="insertSnip('px')">px</div>
+    <div class="snip" onclick="insertSnip('%')">%</div>
+    <div class="snip" onclick="insertSnip('!important')">!imp</div>
+  </div>
+</div>
+
+<!-- FULLSCREEN OVERLAY -->
+
+<div id="fs-overlay">
+  <div id="fs-topbar">
+    <button class="icon-btn" onclick="closeFullscreen()">✕</button>
+    <div id="fs-url">preview — live</div>
+    <button class="icon-btn" onclick="runCode()">↺</button>
+  </div>
+  <iframe id="fs-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+</div>
+
+<!-- SNIPPETS DRAWER -->
+
+<div id="modal-overlay" onclick="closeModal(event)">
+  <div id="modal-drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-title">⚡ Snippets rápidos</div>
+
+```
+<div class="drawer-section">
+  <h4>HTML Estructura</h4>
+  <div class="drawer-row">
+    <button class="drawer-btn" onclick="useSnip('html','boilerplate')">Boilerplate</button>
+    <button class="drawer-btn" onclick="useSnip('html','flexcenter')">Flex center</button>
+    <button class="drawer-btn" onclick="useSnip('html','card')">Card</button>
+    <button class="drawer-btn" onclick="useSnip('html','form')">Form</button>
+    <button class="drawer-btn" onclick="useSnip('html','navbar')">Navbar</button>
+  </div>
+</div>
+
+<div class="drawer-section">
+  <h4>CSS Efectos</h4>
+  <div class="drawer-row">
+    <button class="drawer-btn" onclick="useSnip('css','gradient')">Gradient</button>
+    <button class="drawer-btn" onclick="useSnip('css','glassmorphism')">Glass</button>
+    <button class="drawer-btn" onclick="useSnip('css','animation')">Animation</button>
+    <button class="drawer-btn" onclick="useSnip('css','grid')">Grid layout</button>
+    <button class="drawer-btn" onclick="useSnip('css','darkmode')">Dark theme</button>
+  </div>
+</div>
+
+<div class="drawer-section">
+  <h4>JS Interactividad</h4>
+  <div class="drawer-row">
+    <button class="drawer-btn" onclick="useSnip('js','click')">Click event</button>
+    <button class="drawer-btn" onclick="useSnip('js','fetch')">Fetch API</button>
+    <button class="drawer-btn" onclick="useSnip('js','toggle')">Toggle class</button>
+    <button class="drawer-btn" onclick="useSnip('js','counter')">Counter</button>
+  </div>
+</div>
+```
+
+  </div>
+</div>
+
+<!-- TOAST -->
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════
+//  STATE
+// ═══════════════════════════════
+let currentTab = 'html';
+let autoRunTimer = null;
+const STORAGE_KEY = 'devpad_v1';
+const AUTO_DELAY = 800; // ms after typing
+
+const DEFAULT = {
+  html: `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Algoritmo Paso a Paso</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f8f9fa;
-      margin: 0;
-      padding: 20px;
-      color: #333;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    h1 {
-      margin-bottom: 30px;
-      color: #222;
-    }
-
-    table {
-      border-collapse: collapse;
-      margin: 20px 0;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    th, td {
-      border: 1px solid #dee2e6;
-      width: 60px;
-      height: 60px;
-      text-align: center;
-      font-size: 18px;
-      font-weight: 600;
-      background-color: #fff;
-      transition: background-color 0.3s;
-    }
-
-    th {
-      background-color: #f1f3f5;
-    }
-
-    .highlight {
-      background-color: #ffe066 !important;
-    }
-
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      font-weight: bold;
-      color: white;
-      background-color: #007bff;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-
-    button:hover {
-      background-color: #0056b3;
-    }
-
-    #log {
-      white-space: pre-wrap;
-      background: #212529;
-      color: #f8f9fa;
-      padding: 15px;
-      margin-top: 30px;
-      width: 100%;
-      max-width: 600px;
-      height: 250px;
-      overflow-y: auto;
-      border-radius: 8px;
-      box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi página</title>
 </head>
 <body>
-  <h1>Algoritmo Warshall</h1>
 
-  <table id="matrix"></table>
+  <h1>¡Hola Mundo! 👋</h1>
+  <p>Edita el código arriba y mira los cambios aquí abajo en tiempo real.</p>
 
-  <button onclick="nextStep()">▶ Siguiente paso</button>
+  <button onclick="this.textContent='¡Funcionó! 🎉'">
+    Tócame
+  </button>
 
-  <div id="log"></div>
+</body>
+</html>`,
+  css: `/* Estilos globales */
+body {
+  font-family: -apple-system, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  margin: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  text-align: center;
+  padding: 20px;
+}
 
-    <script>
-    let labels = ['1', '2', '3'];
-    let A = [
-        [0, 1, 0],
-        [0, 0, 1],
-        [0, 0, 0]
-    ];
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 16px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
 
-    let N = A.length;
-    let k = 0, i = 0, j = 0;
-    let evaluating = false;
-    const logDiv = document.getElementById('log');
+p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  max-width: 300px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
 
-    function drawMatrix() {
-        const table = document.getElementById('matrix');
-        table.innerHTML = '';
+button {
+  background: white;
+  color: #764ba2;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
 
-        const headerRow = document.createElement('tr');
-        headerRow.innerHTML = '<th></th>' + labels.map(l => `<th>${l}</th>`).join('');
-        table.appendChild(headerRow);
+button:active {
+  transform: scale(0.95);
+}`,
+  js: `// JavaScript — se ejecuta en el preview
+// No necesitas importar nada, corre directo en el HTML
 
-        for (let row = 0; row < N; row++) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<th>${labels[row]}</th>`;
-        for (let col = 0; col < N; col++) {
-            let td = document.createElement('td');
-            td.textContent = A[row][col];
-            if (row === i && col === j) {
-            td.classList.add('highlight');
-            }
-            tr.appendChild(td);
-        }
-        table.appendChild(tr);
-        }
+console.log('¡DevPad listo!');
+
+// Ejemplo: cambiar el fondo con un click
+document.addEventListener('DOMContentLoaded', () => {
+  const colors = [
+    '135deg, #667eea, #764ba2',
+    '135deg, #f093fb, #f5576c',
+    '135deg, #4facfe, #00f2fe',
+    '135deg, #43e97b, #38f9d7',
+    '135deg, #fa709a, #fee140',
+  ];
+  let i = 0;
+  document.body.addEventListener('dblclick', () => {
+    i = (i + 1) % colors.length;
+    document.body.style.background = \`linear-gradient(\${colors[i]})\`;
+  });
+});`
+};
+
+// ═══════════════════════════════
+//  SNIPPETS LIBRARY
+// ═══════════════════════════════
+const SNIPPETS = {
+  html: {
+    boilerplate: `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Página</title>
+</head>
+<body>
+
+  <h1>Título</h1>
+
+</body>
+</html>`,
+    flexcenter: `<div class="container">
+  <div class="box">Centrado con Flexbox</div>
+</div>`,
+    card: `<div class="card">
+  <img src="https://picsum.photos/300/200" alt="imagen">
+  <div class="card-body">
+    <h2>Título de la card</h2>
+    <p>Descripción del contenido aquí.</p>
+    <button>Ver más</button>
+  </div>
+</div>`,
+    form: `<form>
+  <label>Nombre</label>
+  <input type="text" placeholder="Tu nombre">
+
+  <label>Email</label>
+  <input type="email" placeholder="tu@email.com">
+
+  <button type="submit">Enviar</button>
+</form>`,
+    navbar: `<nav>
+  <div class="logo">Mi Sitio</div>
+  <ul>
+    <li><a href="#">Inicio</a></li>
+    <li><a href="#">Acerca</a></li>
+    <li><a href="#">Contacto</a></li>
+  </ul>
+</nav>`
+  },
+  css: {
+    gradient: `body {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+}`,
+    glassmorphism: `.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 24px;
+}`,
+    animation: `@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animated {
+  animation: fadeIn 0.6s ease both;
+}`,
+    grid: `.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  padding: 16px;
+}`,
+    darkmode: `:root {
+  --bg: #1a1a2e;
+  --surface: #16213e;
+  --text: #eaeaea;
+  --accent: #e94560;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: sans-serif;
+}`
+  },
+  js: {
+    click: `document.querySelector('button').addEventListener('click', function() {
+  alert('¡Hiciste click!');
+});`,
+    fetch: `fetch('https://api.adviceslip.com/advice')
+  .then(r => r.json())
+  .then(data => {
+    document.body.innerHTML = '<p>' + data.slip.advice + '</p>';
+  });`,
+    toggle: `const btn = document.querySelector('button');
+const box = document.querySelector('.box');
+
+btn.addEventListener('click', () => {
+  box.classList.toggle('active');
+});`,
+    counter: `let count = 0;
+const display = document.getElementById('count');
+const btn = document.querySelector('button');
+
+btn.addEventListener('click', () => {
+  count++;
+  display.textContent = count;
+});`
+  }
+};
+
+// ═══════════════════════════════
+//  INIT
+// ═══════════════════════════════
+function init() {
+  const saved = load();
+  document.getElementById('code-html').value = saved.html || DEFAULT.html;
+  document.getElementById('code-css').value  = saved.css  || DEFAULT.css;
+  document.getElementById('code-js').value   = saved.js   || DEFAULT.js;
+  runCode();
+  checkInstallBanner();
+}
+
+// ═══════════════════════════════
+//  STORAGE
+// ═══════════════════════════════
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      html: document.getElementById('code-html').value,
+      css:  document.getElementById('code-css').value,
+      js:   document.getElementById('code-js').value,
+    }));
+  } catch(e) {}
+}
+
+function load() {
+  try {
+    const d = localStorage.getItem(STORAGE_KEY);
+    return d ? JSON.parse(d) : {};
+  } catch(e) { return {}; }
+}
+
+// ═══════════════════════════════
+//  TABS
+// ═══════════════════════════════
+function switchTab(tab) {
+  currentTab = tab;
+  ['html','css','js'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('panel-' + t).classList.toggle('active', t === tab);
+  });
+  hideAC();
+}
+
+// ═══════════════════════════════
+//  EDITOR HELPERS
+// ═══════════════════════════════
+function insertAt(ta, text) {
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  ta.setRangeText(text, s, e, 'end');
+}
+
+function onEdit(tab) {
+  save();
+  clearTimeout(autoRunTimer);
+  autoRunTimer = setTimeout(runCode, AUTO_DELAY);
+}
+
+// ═══════════════════════════════
+//  AUTOCOMPLETE SYSTEM
+// ═══════════════════════════════
+
+// HTML tags that are self-closing (void elements)
+const VOID_TAGS = new Set([
+  'area','base','br','col','embed','hr','img','input',
+  'link','meta','param','source','track','wbr'
+]);
+
+// CSS properties that get value autocomplete
+const CSS_PROPS = {
+  'display':['flex','grid','block','inline-block','none','inline','contents'],
+  'position':['relative','absolute','fixed','sticky','static'],
+  'flex-direction':['row','column','row-reverse','column-reverse'],
+  'justify-content':['center','flex-start','flex-end','space-between','space-around','space-evenly'],
+  'align-items':['center','flex-start','flex-end','stretch','baseline'],
+  'text-align':['center','left','right','justify'],
+  'font-weight':['400','700','900','bold','normal','600','300'],
+  'overflow':['hidden','auto','scroll','visible'],
+  'cursor':['pointer','default','grab','text','none'],
+  'text-transform':['uppercase','lowercase','capitalize','none'],
+  'text-decoration':['none','underline','line-through'],
+  'visibility':['hidden','visible'],
+  'box-sizing':['border-box','content-box'],
+  'border-style':['solid','dashed','dotted','none','double'],
+  'background-repeat':['no-repeat','repeat','repeat-x','repeat-y'],
+  'background-size':['cover','contain','auto'],
+  'white-space':['nowrap','pre','pre-wrap','normal'],
+  'object-fit':['cover','contain','fill','none'],
+};
+
+// Autocomplete popup state
+let acPopup = null;
+let acItems = [];
+let acIndex = 0;
+let acTa = null;
+let acTriggerStart = 0;
+
+function getActiveTA() {
+  return document.getElementById('code-' + currentTab);
+}
+
+// ── Main key handler ──
+function handleKey(e, lang) {
+  const ta = e.target;
+
+  // ── Autocomplete navigation ──
+  if (acPopup && acPopup.style.display !== 'none') {
+    if (e.key === 'ArrowDown') { e.preventDefault(); moveAC(1); return; }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); moveAC(-1); return; }
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      if (acItems.length) { e.preventDefault(); applyAC(); return; }
+    }
+    if (e.key === 'Escape') { hideAC(); return; }
+  }
+
+  // ── Tab → Emmet expand OR 2 spaces ──
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    if (!expandEmmet(ta, lang)) {
+      insertAt(ta, '  ');
+    }
+    return;
+  }
+
+  // ── Enter → smart indent ──
+  if (e.key === 'Enter') {
+    const s = ta.selectionStart;
+    const line = ta.value.slice(0, s).split('\n').pop();
+    const indent = line.match(/^(\s*)/)[1];
+
+    // Check if cursor is between opening and closing HTML tag: <tag>|</tag>
+    const before = ta.value.slice(0, s);
+    const after  = ta.value.slice(s);
+    const betweenTags = />\s*$/.test(before) && /^\s*<\//.test(after);
+
+    if (betweenTags && lang === 'html') {
+      e.preventDefault();
+      const ins = '\n' + indent + '  \n' + indent;
+      insertAt(ta, ins);
+      // Place cursor on the inner line
+      ta.selectionStart = ta.selectionEnd = s + indent.length + 3;
+      return;
     }
 
-    function nextStep() {
-        if (k >= N) {
-        log("Algoritmo terminado.");
+    // CSS: after { → indent next line, add closing }
+    if (lang === 'css' && line.trimEnd().endsWith('{')) {
+      e.preventDefault();
+      const ins = '\n' + indent + '  \n' + indent + '}';
+      insertAt(ta, ins);
+      ta.selectionStart = ta.selectionEnd = s + indent.length + 3;
+      return;
+    }
+
+    // JS: after { → indent
+    if (lang === 'js' && line.trimEnd().endsWith('{')) {
+      e.preventDefault();
+      const ins = '\n' + indent + '  \n' + indent + '}';
+      insertAt(ta, ins);
+      ta.selectionStart = ta.selectionEnd = s + indent.length + 3;
+      return;
+    }
+
+    // Default: keep same indent level
+    e.preventDefault();
+    insertAt(ta, '\n' + indent);
+    return;
+  }
+
+  // ── > in HTML → auto close tag ──
+  if (e.key === '>' && lang === 'html') {
+    e.preventDefault();
+    const s = ta.selectionStart;
+    // Find the tag being typed
+    const before = ta.value.slice(0, s);
+    const match = before.match(/<(\w[\w\d-]*)([^<]*)$/);
+    if (match) {
+      const tag = match[1].toLowerCase();
+      if (!VOID_TAGS.has(tag) && !match[2].includes('/')) {
+        insertAt(ta, '></' + tag + '>');
+        ta.selectionStart = ta.selectionEnd = s + 1;
+        onEdit(lang);
         return;
-        }
-
-        if (!evaluating) {
-        log(`Evaluando celda A[${i+1}, ${j+1}] con K=${k+1}`);
-        drawMatrix();
-        evaluating = true;
-        return;
-        }
-
-        
-        if (A[i][j] === 0 && A[i][k] === 1 && A[k][j] === 1) {
-        A[i][j] = 1;
-        log(`✔ A[${i+1}, ${j+1}] actualizado a 1 (A[${i+1}, ${k+1}] = 1 y A[${k+1}, ${j+1}] = 1)`);
-        } else {
-        log(`✘ A[${i+1}, ${j+1}] no cambia`);
-        }
-
-        
-        j++;
-        if (j === N) {
-        j = 0;
-        i++;
-        if (i === N) {
-            i = 0;
-            k++;
-        }
-        }
-
-        evaluating = false;
-        drawMatrix();
+      }
     }
+    insertAt(ta, '>');
+    return;
+  }
 
-    function log(message) {
-        logDiv.textContent += message + '\n';
-        logDiv.scrollTop = logDiv.scrollHeight;
-    }
+  // ── Auto-close brackets & quotes ──
+  const pairs = { '(':')', '[':']', '{':'}' };
+  if (pairs[e.key] && !e.metaKey && !e.ctrlKey) {
+    e.preventDefault();
+    const s = ta.selectionStart, end = ta.selectionEnd;
+    const sel = ta.value.slice(s, end);
+    insertAt(ta, e.key + sel + pairs[e.key]);
+    ta.selectionStart = ta.selectionEnd = s + 1;
+    onEdit(lang);
+    return;
+  }
 
-    drawMatrix();
-    </script>
+  // Schedule AC after keydown settles
+  setTimeout(() => triggerAC(ta, lang), 0);
+}
+
+// ── Emmet-style expansion on Tab ──
+const EMMET = {
+  // ── Boilerplates ──
+  'html:5': `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Página</title>
+</head>
+<body>
+  |
+</body>
+</html>`,
+  '!': `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Página</title>
+</head>
+<body>
+  |
+</body>
+</html>`,
+  // ── Common tags ──
+  'a':           '<a href="|"></a>',
+  'a:blank':     '<a href="|" target="_blank" rel="noopener"></a>',
+  'img':         '<img src="|" alt="">',
+  'input':       '<input type="text" placeholder="|">',
+  'input:text':  '<input type="text" name="|" placeholder="">',
+  'input:email': '<input type="email" name="|" placeholder="Email">',
+  'input:pass':  '<input type="password" name="|" placeholder="Contraseña">',
+  'input:check': '<input type="checkbox" id="|">',
+  'input:radio': '<input type="radio" name="|">',
+  'input:submit':'<input type="submit" value="|">',
+  'btn':         '<button type="button">|</button>',
+  'button':      '<button type="button">|</button>',
+  'link:css':    '<link rel="stylesheet" href="|style.css">',
+  'script:src':  '<script src="|"></script>',
+
+‘meta:utf’:    ‘<meta charset="UTF-8">’,
+‘meta:vp’:     ‘<meta name="viewport" content="width=device-width, initial-scale=1.0">’,
+‘label’:       ‘<label for="|"></label>’,
+‘form’:        ‘<form action="|" method="post">\n  \n</form>’,
+‘select’:      ‘<select name="|">\n  <option value="">Seleccionar</option>\n</select>’,
+‘table’:       ‘<table>\n  <thead>\n    <tr>\n      <th>|</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <td></td>\n    </tr>\n  </tbody>\n</table>’,
+‘ul’:          ‘<ul>\n  <li>|</li>\n</ul>’,
+‘ol’:          ‘<ol>\n  <li>|</li>\n</ol>’,
+‘video’:       ‘<video src="|" controls></video>’,
+‘audio’:       ‘<audio src="|" controls></audio>’,
+‘figure’:      ‘<figure>\n  <img src="|" alt="">\n  <figcaption></figcaption>\n</figure>’,
+// ── Layout ──
+‘nav’:         ‘<nav>\n  |\n</nav>’,
+‘header’:      ‘<header>\n  |\n</header>’,
+‘footer’:      ‘<footer>\n  |\n</footer>’,
+‘main’:        ‘<main>\n  |\n</main>’,
+‘section’:     ‘<section>\n  |\n</section>’,
+‘article’:     ‘<article>\n  |\n</article>’,
+‘aside’:       ‘<aside>\n  |\n</aside>’,
+// ── CSS snippets ──
+‘flex’:        ‘display: flex;\njustify-content: center;\nalign-items: center;’,
+‘grid’:        ‘display: grid;\ngrid-template-columns: repeat(auto-fill, minmax(|200px, 1fr));\ngap: 16px;’,
+‘abs’:         ‘position: absolute;\ntop: |;\nleft: ;’,
+‘fix’:         ‘position: fixed;\ntop: |;\nleft: ;’,
+‘bg’:          ‘background: url(”|”) center/cover no-repeat;’,
+‘tr’:          ‘transition: all |0.3s ease;’,
+‘anim’:        ‘@keyframes | {\n  from { }\n  to   { }\n}’,
+‘mq’:          ‘@media (max-width: |768px) {\n  \n}’,
+‘root’:        ‘:root {\n  –color: |;\n  –font: ;\n}’,
+};
+
+function expandEmmet(ta, lang) {
+const s = ta.selectionStart;
+const textBefore = ta.value.slice(0, s);
+
+// Get the word/abbreviation right before cursor
+const match = textBefore.match(/([\w:!]+)$/);
+if (!match) return false;
+
+const abbr = match[1];
+let expansion = EMMET[abbr];
+if (!expansion) return false;
+
+const start = s - abbr.length;
+
+// Find cursor position marker | in expansion
+const cursorPos = expansion.indexOf(’|’);
+const cleanExp = expansion.replace(’|’, ‘’);
+
+ta.setRangeText(cleanExp, start, s, ‘end’);
+
+// Place cursor at | marker
+if (cursorPos !== -1) {
+ta.selectionStart = ta.selectionEnd = start + cursorPos;
+}
+
+onEdit(lang);
+hideAC();
+return true;
+}
+
+// ── Trigger autocomplete ──
+function triggerAC(ta, lang) {
+const s = ta.selectionStart;
+const textBefore = ta.value.slice(0, s);
+
+let suggestions = [];
+let triggerStart = s;
+
+if (lang === ‘html’) {
+// Match partial tag like <h1, <div, <se
+const tagMatch = textBefore.match(/<(\w[\w\d-]*)$/);
+if (tagMatch) {
+const partial = tagMatch[1].toLowerCase();
+triggerStart = s - partial.length;
+const all = [‘html’,‘head’,‘body’,‘div’,‘span’,‘p’,‘h1’,‘h2’,‘h3’,‘h4’,‘h5’,‘h6’,
+‘a’,‘img’,‘ul’,‘ol’,‘li’,‘table’,‘tr’,‘td’,‘th’,‘thead’,‘tbody’,
+‘form’,‘input’,‘button’,‘label’,‘select’,‘option’,‘textarea’,
+‘nav’,‘header’,‘footer’,‘main’,‘section’,‘article’,‘aside’,
+‘script’,‘style’,‘link’,‘meta’,‘title’,‘br’,‘hr’,‘strong’,
+‘em’,‘code’,‘pre’,‘blockquote’,‘figure’,‘figcaption’,‘video’,‘audio’];
+suggestions = all.filter(t => t.startsWith(partial) && t !== partial);
+acTriggerStart = triggerStart;
+}
+
+```
+// Match HTML attribute
+const attrMatch = textBefore.match(/<\w[\w-]*\s+[\w-]*$/);
+if (attrMatch && !tagMatch) {
+  const partial = textBefore.match(/[\w-]+$/) || [''];
+  const attrs = ['class','id','style','href','src','alt','type','name','value',
+    'placeholder','disabled','checked','readonly','required','for',
+    'action','method','target','rel','data-','aria-label','role'];
+  suggestions = attrs.filter(a => a.startsWith(partial[0]) && a !== partial[0]);
+  acTriggerStart = s - partial[0].length;
+}
+```
+
+}
+
+if (lang === ‘css’) {
+// Match CSS property
+const propMatch = textBefore.match(/[\n{;]\s*([\w-]*)$/);
+if (propMatch) {
+const partial = propMatch[1];
+if (partial.length >= 1) {
+const allProps = [‘color’,‘background’,‘background-color’,‘background-image’,
+‘background-size’,‘border’,‘border-radius’,‘border-top’,‘border-left’,
+‘border-right’,‘border-bottom’,‘border-color’,‘border-width’,‘border-style’,
+‘margin’,‘margin-top’,‘margin-bottom’,‘margin-left’,‘margin-right’,
+‘padding’,‘padding-top’,‘padding-bottom’,‘padding-left’,‘padding-right’,
+‘width’,‘height’,‘min-width’,‘max-width’,‘min-height’,‘max-height’,
+‘display’,‘flex’,‘flex-direction’,‘flex-wrap’,‘flex-grow’,‘flex-shrink’,
+‘justify-content’,‘align-items’,‘align-self’,‘gap’,‘grid’,‘grid-template-columns’,
+‘grid-template-rows’,‘position’,‘top’,‘left’,‘right’,‘bottom’,‘z-index’,
+‘font-size’,‘font-weight’,‘font-family’,‘font-style’,‘line-height’,
+‘letter-spacing’,‘text-align’,‘text-transform’,‘text-decoration’,
+‘overflow’,‘overflow-x’,‘overflow-y’,‘cursor’,‘opacity’,‘transform’,
+‘transition’,‘animation’,‘box-shadow’,‘text-shadow’,‘outline’,
+‘list-style’,‘object-fit’,‘white-space’,‘visibility’,‘content’,
+‘pointer-events’,‘user-select’,‘resize’,‘vertical-align’];
+suggestions = allProps.filter(p => p.startsWith(partial) && p !== partial);
+acTriggerStart = s - partial.length;
+}
+}
+
+```
+// Match CSS value after colon
+const valueMatch = textBefore.match(/([\w-]+)\s*:\s*([\w-]*)$/);
+if (valueMatch && CSS_PROPS[valueMatch[1]]) {
+  const partial = valueMatch[2];
+  suggestions = CSS_PROPS[valueMatch[1]].filter(v => v.startsWith(partial) && v !== partial);
+  acTriggerStart = s - partial.length;
+}
+```
+
+}
+
+if (lang === ‘js’) {
+const jsMatch = textBefore.match(/[\s=({,!]?([\w.]+)$/);
+if (jsMatch && jsMatch[1].length >= 2) {
+const partial = jsMatch[1];
+const jsWords = [‘document’,‘querySelector’,‘querySelectorAll’,‘getElementById’,
+‘addEventListener’,‘removeEventListener’,‘classList’,‘classList.add’,
+‘classList.remove’,‘classList.toggle’,‘classList.contains’,
+‘innerHTML’,‘textContent’,‘style’,‘setAttribute’,‘getAttribute’,
+‘createElement’,‘appendChild’,‘removeChild’,‘insertAdjacentHTML’,
+‘setTimeout’,‘setInterval’,‘clearTimeout’,‘clearInterval’,
+‘console.log’,‘console.error’,‘JSON.stringify’,‘JSON.parse’,
+‘fetch’,‘Promise’,‘async’,‘await’,‘function’,‘const’,‘let’,‘var’,
+‘return’,‘if’,‘else’,‘for’,‘while’,‘forEach’,‘map’,‘filter’,
+‘localStorage’,‘sessionStorage’,‘window’,‘navigator’,‘location’,
+‘Math.random’,‘Math.floor’,‘Math.ceil’,‘Math.round’,‘Math.max’,‘Math.min’];
+suggestions = jsWords.filter(w => w.startsWith(partial) && w !== partial).slice(0, 8);
+acTriggerStart = s - partial.length;
+}
+}
+
+if (suggestions.length > 0) {
+showAC(ta, suggestions.slice(0, 7));
+} else {
+hideAC();
+}
+}
+
+// ── Show autocomplete popup ──
+function showAC(ta, items) {
+acTa = ta;
+acItems = items;
+acIndex = 0;
+
+if (!acPopup) {
+acPopup = document.createElement(‘div’);
+acPopup.id = ‘ac-popup’;
+acPopup.style.cssText = `position: fixed; background: #1e1e2e; border: 1px solid #7c6dfa; border-radius: 10px; overflow: hidden; z-index: 999; box-shadow: 0 8px 32px rgba(0,0,0,0.6); max-width: 260px; min-width: 140px;`;
+document.body.appendChild(acPopup);
+}
+
+renderAC();
+
+// Position below cursor
+const coords = getCursorCoords(ta);
+const popup = acPopup;
+popup.style.display = ‘block’;
+
+// Keep inside screen
+const ph = popup.offsetHeight || 200;
+const pw = popup.offsetWidth || 200;
+let top = coords.top + 20;
+let left = coords.left;
+if (top + ph > window.innerHeight - 20) top = coords.top - ph - 4;
+if (left + pw > window.innerWidth - 10) left = window.innerWidth - pw - 10;
+popup.style.top = Math.max(4, top) + ‘px’;
+popup.style.left = Math.max(4, left) + ‘px’;
+}
+
+function renderAC() {
+if (!acPopup) return;
+acPopup.innerHTML = acItems.map((item, i) => `<div onclick="applyAC(${i})" style=" padding: 9px 14px; font-family: Menlo, monospace; font-size: 13px; color: ${i === acIndex ? '#fff' : '#c8c8e0'}; background: ${i === acIndex ? '#7c6dfa' : 'transparent'}; cursor: pointer; border-bottom: 1px solid #232330; white-space: nowrap; ">${item}</div>`).join(’’);
+}
+
+function moveAC(dir) {
+acIndex = (acIndex + dir + acItems.length) % acItems.length;
+renderAC();
+}
+
+function applyAC(idx) {
+if (idx !== undefined) acIndex = idx;
+const item = acItems[acIndex];
+if (!item || !acTa) { hideAC(); return; }
+
+const ta = acTa;
+const s = ta.selectionStart;
+const typed = ta.value.slice(acTriggerStart, s);
+
+// Replace the partial word with the completion
+let insertion = item.slice(typed.length);
+
+// If it’s an HTML tag, add > and closing
+if (currentTab === ‘html’ && ta.value.slice(acTriggerStart - 1, acTriggerStart) === ‘<’) {
+if (VOID_TAGS.has(item)) {
+insertion = item.slice(typed.length) + ‘>’;
+} else {
+insertion = item.slice(typed.length) + ‘></’ + item + ‘>’;
+}
+ta.setRangeText(insertion, s, s, ‘end’);
+// Place cursor inside the tag
+const closeTagLen = ‘</’ + item + ‘>’.length;
+ta.selectionStart = ta.selectionEnd = s + insertion.length - closeTagLen;
+} else if (currentTab === ‘css’ && !item.includes(’:’)) {
+// CSS property: add ‘: ;’ and place cursor between
+const isValue = ta.value.slice(0, acTriggerStart).match(/[\w-]+\s*:\s*$/);
+if (isValue) {
+insertion = item.slice(typed.length) + ‘;’;
+ta.setRangeText(insertion, s, s, ‘end’);
+} else {
+insertion = item.slice(typed.length) + ‘: ;’;
+ta.setRangeText(insertion, s, s, ‘end’);
+ta.selectionStart = ta.selectionEnd = s + insertion.length - 1;
+}
+} else {
+ta.setRangeText(insertion, s, s, ‘end’);
+}
+
+hideAC();
+onEdit(currentTab);
+ta.focus();
+}
+
+function hideAC() {
+if (acPopup) acPopup.style.display = ‘none’;
+acItems = [];
+}
+
+// ── Cursor pixel position ──
+function getCursorCoords(ta) {
+const rect = ta.getBoundingClientRect();
+// Simple approximation based on textarea font metrics
+const lineH = 13 * 1.65;
+const s = ta.selectionStart;
+const textBefore = ta.value.slice(0, s);
+const lines = textBefore.split(’\n’);
+const row = lines.length - 1;
+const col = lines[lines.length - 1].length;
+const charW = 7.8; // approximate char width at 13px Menlo
+return {
+top:  rect.top  + (row * lineH) - ta.scrollTop  + 14,
+left: rect.left + (col * charW) - ta.scrollLeft + 14,
+};
+}
+
+// ── Hide AC when clicking outside ──
+document.addEventListener(‘pointerdown’, e => {
+if (acPopup && !acPopup.contains(e.target)) hideAC();
+});
+
+function insertSnip(text) {
+const ta = document.getElementById(‘code-’ + currentTab);
+const s = ta.selectionStart, e = ta.selectionEnd;
+ta.setRangeText(text, s, e, ‘end’);
+ta.focus();
+onEdit(currentTab);
+}
+
+// ═══════════════════════════════
+//  RUN / PREVIEW
+// ═══════════════════════════════
+function runCode() {
+const html = document.getElementById(‘code-html’).value;
+const css  = document.getElementById(‘code-css’).value;
+const js   = document.getElementById(‘code-js’).value;
+
+// Build document — inject CSS and JS into the HTML
+let doc = html;
+if (doc.includes(’</head>’)) {
+doc = doc.replace(’</head>’, `<style>${css}</style>\n</head>`);
+} else {
+doc = `<style>${css}</style>\n` + doc;
+}
+if (doc.includes(’</body>’)) {
+doc = doc.replace(’</body>’, `<script>${js}<\/script>\n</body>`);
+} else {
+doc = doc + `\n<script>${js}<\/script>`;
+}
+
+const frame = document.getElementById(‘preview-frame’);
+frame.srcdoc = doc;
+
+// FS frame too if open
+if (document.getElementById(‘fs-overlay’).classList.contains(‘open’)) {
+document.getElementById(‘fs-frame’).srcdoc = doc;
+}
+}
+
+// ═══════════════════════════════
+//  FULLSCREEN PREVIEW
+// ═══════════════════════════════
+function openFullscreen() {
+runCode();
+const html = document.getElementById(‘code-html’).value;
+const css  = document.getElementById(‘code-css’).value;
+const js   = document.getElementById(‘code-js’).value;
+let doc = html;
+if (doc.includes(’</head>’)) doc = doc.replace(’</head>’, `<style>${css}</style></head>`);
+if (doc.includes(’</body>’)) doc = doc.replace(’</body>’, `<script>${js}<\/script></body>`);
+document.getElementById(‘fs-frame’).srcdoc = doc;
+document.getElementById(‘fs-overlay’).classList.add(‘open’);
+}
+
+function closeFullscreen() {
+document.getElementById(‘fs-overlay’).classList.remove(‘open’);
+}
+
+// ═══════════════════════════════
+//  SNIPPETS DRAWER
+// ═══════════════════════════════
+function openSnippets() {
+document.getElementById(‘modal-overlay’).classList.add(‘open’);
+}
+
+function closeModal(e) {
+if (e.target === document.getElementById(‘modal-overlay’)) {
+document.getElementById(‘modal-overlay’).classList.remove(‘open’);
+}
+}
+
+function useSnip(lang, key) {
+document.getElementById(‘modal-overlay’).classList.remove(‘open’);
+switchTab(lang);
+const ta = document.getElementById(‘code-’ + lang);
+const s = ta.selectionStart;
+ta.setRangeText(’\n’ + SNIPPETS[lang][key] + ‘\n’, s, s, ‘end’);
+onEdit(lang);
+toast(‘Snippet insertado ✓’);
+}
+
+// ═══════════════════════════════
+//  CLEAR
+// ═══════════════════════════════
+function clearEditor() {
+if (confirm(’¿Borrar el código de este archivo?’)) {
+document.getElementById(‘code-’ + currentTab).value = ‘’;
+save();
+runCode();
+toast(‘Archivo limpiado’);
+}
+}
+
+// ═══════════════════════════════
+//  TOAST
+// ═══════════════════════════════
+function toast(msg) {
+const t = document.getElementById(‘toast’);
+t.textContent = msg;
+t.classList.add(‘show’);
+setTimeout(() => t.classList.remove(‘show’), 2000);
+}
+
+// ═══════════════════════════════
+//  INSTALL BANNER
+// ═══════════════════════════════
+function checkInstallBanner() {
+const dismissed = localStorage.getItem(‘devpad_banner’);
+const isStandalone = window.navigator.standalone === true;
+if (!dismissed && !isStandalone) {
+document.getElementById(‘install-banner’).classList.add(‘show’);
+}
+}
+
+function closeBanner() {
+document.getElementById(‘install-banner’).classList.remove(‘show’);
+localStorage.setItem(‘devpad_banner’, ‘1’);
+}
+
+// ═══════════════════════════════
+//  DRAG DIVIDER (resize panels)
+// ═══════════════════════════════
+(function() {
+const div = document.getElementById(‘divider’);
+const main = document.getElementById(‘main’);
+let dragging = false, startY, startH;
+
+function getPreviewH() {
+return document.getElementById(‘preview-area’).offsetHeight;
+}
+function setPreviewH(h) {
+const mainH = main.offsetHeight;
+const min = 80, max = mainH - 80;
+h = Math.max(min, Math.min(max, h));
+document.getElementById(‘preview-area’).style.height = h + ‘px’;
+}
+
+div.addEventListener(‘touchstart’, e => {
+dragging = true;
+startY = e.touches[0].clientY;
+startH = getPreviewH();
+}, {passive: true});
+
+window.addEventListener(‘touchmove’, e => {
+if (!dragging) return;
+const dy = startY - e.touches[0].clientY;
+setPreviewH(startH + dy);
+}, {passive: true});
+
+window.addEventListener(‘touchend’, () => { dragging = false; });
+
+// Mouse for desktop testing
+div.addEventListener(‘mousedown’, e => {
+dragging = true;
+startY = e.clientY;
+startH = getPreviewH();
+document.body.style.userSelect = ‘none’;
+});
+window.addEventListener(‘mousemove’, e => {
+if (!dragging) return;
+const dy = startY - e.clientY;
+setPreviewH(startH + dy);
+});
+window.addEventListener(‘mouseup’, () => {
+dragging = false;
+document.body.style.userSelect = ‘’;
+});
+})();
+
+// ═══════════════════════════════
+//  START
+// ═══════════════════════════════
+window.addEventListener(‘DOMContentLoaded’, init);
+</script>
+
 </body>
 </html>
